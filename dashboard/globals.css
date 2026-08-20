@@ -1,0 +1,234 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+:root {
+  --bg: #12161c;
+  --bg-raised: #171c24;
+  --bg-row-alt: #151a21;
+  --rule: #262c36;
+  --text: #e8e6df;
+  --text-dim: #8b94a3;
+  --text-faint: #545c69;
+
+  --green: #4c9a6a;
+  --green-dim: #4c9a6a33;
+  --amber: #d4a24c;
+  --rose: #c1666b;
+  --rose-dim: #c1666b33;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-sans: "IBM Plex Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ---- Header ---- */
+.masthead {
+  padding: 40px 0 24px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.masthead h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.masthead p {
+  color: var(--text-dim);
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ---- Ticker strip (signature summary bar) ---- */
+.ticker-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg-raised);
+}
+
+.ticker-item {
+  flex: 1;
+  min-width: 140px;
+  padding: 16px 20px;
+  border-right: 1px solid var(--rule);
+}
+
+.ticker-item:last-child {
+  border-right: none;
+}
+
+.ticker-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.ticker-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* ---- Table ---- */
+.table-wrap {
+  margin-top: 32px;
+}
+
+.col-headers,
+.row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr 1.6fr 0.9fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.col-headers {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--rule);
+}
+
+.row {
+  border-bottom: 1px solid var(--rule);
+}
+
+.row:nth-child(even) {
+  background: var(--bg-row-alt);
+}
+
+.symbol {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.pattern {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.num.entry {
+  color: var(--amber);
+}
+
+.num.stop {
+  color: var(--rose);
+}
+
+.num.target {
+  color: var(--green);
+}
+
+/* ---- Risk bar (signature element) ---- */
+.riskbar-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.riskbar {
+  position: relative;
+  height: 6px;
+  background: var(--rule);
+  display: flex;
+}
+
+.riskbar-loss {
+  background: var(--rose-dim);
+  height: 100%;
+}
+
+.riskbar-gain {
+  background: var(--green-dim);
+  height: 100%;
+}
+
+.riskbar-marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  background: var(--amber);
+}
+
+.riskbar-caption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ---- Empty / loading states ---- */
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-dim);
+  border: 1px dashed var(--rule);
+  margin-top: 32px;
+}
+
+.empty-state h2 {
+  font-family: var(--font-display);
+  color: var(--text);
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 720px) {
+  .col-headers {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 16px;
+  }
+
+  .num::before {
+    content: attr(data-label) " ";
+    color: var(--text-faint);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
