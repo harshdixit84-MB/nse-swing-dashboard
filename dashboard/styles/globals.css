@@ -39,21 +39,35 @@ a {
 }
 
 .page {
-  max-width: 1080px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 0 20px 80px;
 }
 
+.accent-bar {
+  height: 3px;
+  margin: 0 -20px;
+  background: linear-gradient(90deg, var(--green), var(--amber), var(--rose));
+}
+
 /* ---- Header ---- */
 .masthead {
-  padding: 40px 0 24px;
+  padding: 32px 0 24px;
   border-bottom: 1px solid var(--rule);
+}
+
+.masthead-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .masthead h1 {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 28px;
+  font-size: 30px;
   margin: 0 0 4px;
   letter-spacing: -0.01em;
 }
@@ -64,19 +78,58 @@ a {
   font-size: 14px;
 }
 
+.market-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.market-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.market-badge.is-open {
+  color: var(--green);
+  border-color: var(--green-dim);
+}
+
+.market-badge.is-open .dot {
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-dim);
+}
+
+.market-badge.is-closed {
+  color: var(--rose);
+  border-color: var(--rose-dim);
+}
+
+.market-badge.is-closed .dot {
+  background: var(--rose);
+}
+
 /* ---- Ticker strip (signature summary bar) ---- */
 .ticker-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 0;
   border-bottom: 1px solid var(--rule);
   background: var(--bg-raised);
 }
 
 .ticker-item {
   flex: 1;
-  min-width: 140px;
-  padding: 16px 20px;
+  min-width: 130px;
+  padding: 18px 20px;
   border-right: 1px solid var(--rule);
 }
 
@@ -98,15 +151,59 @@ a {
   font-weight: 600;
 }
 
+.ticker-value.accent {
+  color: var(--amber);
+}
+
+/* ---- Controls ---- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0 12px;
+  flex-wrap: wrap;
+}
+
+.controls-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-right: 4px;
+}
+
+.sort-btn {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sort-btn:hover {
+  border-color: var(--text-faint);
+  color: var(--text);
+}
+
+.sort-btn.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
 /* ---- Table ---- */
 .table-wrap {
-  margin-top: 32px;
+  margin-top: 8px;
 }
 
 .col-headers,
 .row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr 1.6fr 0.9fr;
+  grid-template-columns: 1.1fr 0.9fr 0.9fr 0.9fr 1.5fr 0.8fr 0.7fr;
   gap: 12px;
   align-items: center;
   padding: 14px 16px;
@@ -122,10 +219,15 @@ a {
 
 .row {
   border-bottom: 1px solid var(--rule);
+  transition: background 0.15s ease;
 }
 
 .row:nth-child(even) {
   background: var(--bg-row-alt);
+}
+
+.row:hover {
+  background: #1b2129;
 }
 
 .symbol {
@@ -157,6 +259,26 @@ a {
   color: var(--green);
 }
 
+.chart-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  border: 1px solid var(--rule);
+  padding: 5px 10px;
+  border-radius: 6px;
+  justify-self: start;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.chart-link:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
 /* ---- Risk bar (signature element) ---- */
 .riskbar-cell {
   display: flex;
@@ -169,16 +291,20 @@ a {
   height: 6px;
   background: var(--rule);
   display: flex;
+  border-radius: 3px;
+  overflow: visible;
 }
 
 .riskbar-loss {
   background: var(--rose-dim);
   height: 100%;
+  border-radius: 3px 0 0 3px;
 }
 
 .riskbar-gain {
   background: var(--green-dim);
   height: 100%;
+  border-radius: 0 3px 3px 0;
 }
 
 .riskbar-marker {
@@ -201,7 +327,7 @@ a {
   text-align: center;
   color: var(--text-dim);
   border: 1px dashed var(--rule);
-  margin-top: 32px;
+  margin-top: 12px;
 }
 
 .empty-state h2 {
@@ -211,15 +337,29 @@ a {
   margin-bottom: 8px;
 }
 
+/* ---- Footer ---- */
+.footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+
+.footer p {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ---- Mobile ---- */
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .col-headers {
     display: none;
   }
 
   .row {
     grid-template-columns: 1fr;
-    gap: 6px;
+    gap: 8px;
     padding: 16px;
   }
 
@@ -230,5 +370,10 @@ a {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+  }
+
+  .chart-link {
+    justify-self: start;
+    margin-top: 4px;
   }
 }
