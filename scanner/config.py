@@ -25,8 +25,8 @@ STOP_BUFFER_PCT = 0.5          # extra cushion below the calculated stop
 MAX_HOLDING_DAYS = 15          # informational -- shown on the dashboard
 
 # ---- Data settings ----
-LOOKBACK_PERIOD = "6mo"        # how much history to pull per stock
-DATA_INTERVAL = "1d"
+LOOKBACK_PERIOD = "6mo"        # how much daily history to pull per stock
+DATA_INTERVAL = "1d"           # daily candles -- change to "1wk" for weekly swings
 
 # ---- File paths ----
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
@@ -35,9 +35,17 @@ HISTORY_FILE = os.path.join(DATA_DIR, "history.json")
 UNIVERSE_FALLBACK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe_fallback.csv")
 
 # ---- NSE universe source ----
-# Official NSE Nifty 500 constituent list (CSV). Falls back to the local
-# CSV below if this URL is unreachable or blocked on a given day.
+# UNIVERSE_MODE: "NIFTY500" scans ~500 large/mid-cap names (faster, more liquid).
+# "ALL_NSE" scans every listed NSE equity (~2000 symbols, slower, includes
+# small/micro caps -- expect more false signals from thinly-traded names).
+UNIVERSE_MODE = os.environ.get("UNIVERSE_MODE", "NIFTY500")
+
 NIFTY500_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+ALL_NSE_EQUITY_URL = "https://archives.nseindia.com/content/equity/EQUITY_L.csv"
+
+# How many tickers to request from Yahoo Finance per batch download.
+# Larger batches = fewer requests but bigger payloads; 50-100 is a safe range.
+BATCH_SIZE = 75
 
 # ---- Telegram ----
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
