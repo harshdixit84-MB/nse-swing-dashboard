@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 // ---- Replace these two lines with your own GitHub username/repo ----
-const GITHUB_USER = "YOUR_GITHUB_USERNAME";
-const GITHUB_REPO = "YOUR_REPO_NAME";
+const GITHUB_USER = "harshdixit84-MB";
+const GITHUB_REPO = "nse-swing-dashboard";
 // ----------------------------------------------------------------------
 
 const CANDIDATES_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/data/candidates.json`;
