@@ -5,8 +5,8 @@ Run this via `python scan.py` locally, or automatically through the
 GitHub Actions workflow (.github/workflows/daily-scan.yml).
 
 Steps:
-1. Load the NSE universe
-2. Pull daily OHLCV data for each stock
+1. Load the NSE universe (Nifty 500 or all NSE, per UNIVERSE_MODE)
+2. Pull daily OHLCV data for each stock, in batches
 3. Run the EMA Pullback strategy on each
 4. Write today's candidates + append to the running history
 5. Send a Telegram alert for any symbol that's newly appeared today
@@ -14,7 +14,6 @@ Steps:
 
 import json
 import os
-import time
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -27,6 +26,8 @@ from config import (
     LOOKBACK_PERIOD,
     DATA_INTERVAL,
     MAX_HOLDING_DAYS,
+    BATCH_SIZE,
+    UNIVERSE_MODE,
 )
 from universe import get_universe
 from strategy import evaluate
@@ -46,21 +47,50 @@ def save_json(path, data):
         json.dump(data, f, indent=2)
 
 
-def fetch_history(symbol: str):
-    ticker = f"{symbol}.NS"
+def chunked(items, size):
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
+
+
+def fetch_batch(symbols):
+    """
+    Downloads daily OHLCV for a batch of symbols in one request.
+    Returns {symbol: DataFrame} for symbols that returned usable data.
+    """
+    tickers = [f"{s}.NS" for s in symbols]
     try:
-        df = yf.Ticker(ticker).history(period=LOOKBACK_PERIOD, interval=DATA_INTERVAL)
-        if df is None or df.empty:
-            return None
-        return df
+        raw = yf.download(
+            tickers=tickers,
+            period=LOOKBACK_PERIOD,
+            interval=DATA_INTERVAL,
+            group_by="ticker",
+            threads=True,
+            progress=False,
+            auto_adjust=False,
+        )
     except Exception as e:
-        print(f"  Failed to fetch {ticker}: {e}")
-        return None
+        print(f"  Batch download failed: {e}")
+        return {}
+
+    result = {}
+    for symbol in symbols:
+        ticker = f"{symbol}.NS"
+        try:
+            if len(tickers) == 1:
+                df = raw
+            else:
+                df = raw[ticker]
+            df = df.dropna(how="all")
+            if not df.empty and "Close" in df.columns:
+                result[symbol] = df
+        except (KeyError, Exception):
+            continue
+    return result
 
 
 def main():
     scan_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    print(f"Starting scan for {scan_date}")
+    print(f"Starting scan for {scan_date} (universe mode: {UNIVERSE_MODE})")
 
     universe = get_universe()
     previous_candidates = load_json(CANDIDATES_FILE, {"scan_date": None, "candidates": []})
@@ -70,31 +100,28 @@ def main():
 
     today_candidates = []
     new_symbols = []
+    batches = list(chunked(universe, BATCH_SIZE))
 
-    for i, symbol in enumerate(universe):
-        print(f"[{i + 1}/{len(universe)}] Checking {symbol}...")
-        df = fetch_history(symbol)
-        if df is None:
-            continue
+    for batch_num, batch in enumerate(batches, start=1):
+        print(f"Batch {batch_num}/{len(batches)} -- {len(batch)} symbols")
+        batch_data = fetch_batch(batch)
 
-        setup = evaluate(df)
-        if setup is None:
-            continue
+        for symbol, df in batch_data.items():
+            setup = evaluate(df)
+            if setup is None:
+                continue
 
-        entry = {
-            "symbol": symbol,
-            "date_found": scan_date,
-            "max_holding_days": MAX_HOLDING_DAYS,
-            **setup,
-        }
-        today_candidates.append(entry)
-        history["entries"].append(entry)
+            entry = {
+                "symbol": symbol,
+                "date_found": scan_date,
+                "max_holding_days": MAX_HOLDING_DAYS,
+                **setup,
+            }
+            today_candidates.append(entry)
+            history["entries"].append(entry)
 
-        if symbol not in previous_symbols:
-            new_symbols.append(entry)
-
-        # Small delay to be polite to Yahoo Finance rate limits
-        time.sleep(0.3)
+            if symbol not in previous_symbols:
+                new_symbols.append(entry)
 
     save_json(CANDIDATES_FILE, {"scan_date": scan_date, "candidates": today_candidates})
     save_json(HISTORY_FILE, history)
