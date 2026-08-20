@@ -13,6 +13,7 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 60   # ALL_NSE mode scans ~2000 symbols; adjust if needed
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -31,6 +32,9 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Set to "ALL_NSE" to scan every listed NSE equity instead of
+          # just the Nifty 500. Can also be set as a repo variable/secret.
+          UNIVERSE_MODE: "NIFTY500"
         run: python scan.py
 
       - name: Commit updated data
