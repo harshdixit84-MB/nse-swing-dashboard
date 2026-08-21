@@ -30,6 +30,20 @@ HISTORY_DAYS_BACK = 220        # calendar days of history to request per stock
                                 # (padded to comfortably cover EMA_SLOW +
                                 # SWING_LOOKBACK_DAYS worth of trading bars)
 
+# ---- Angel One SmartAPI (data source) ----
+# Free, key-based historical data -- does not get IP-blocked the way
+# scraping Yahoo/NSE did, since it's an authenticated API contract.
+ANGEL_API_KEY = os.environ.get("ANGEL_API_KEY", "")
+ANGEL_CLIENT_ID = os.environ.get("ANGEL_CLIENT_ID", "")
+ANGEL_PASSWORD = os.environ.get("ANGEL_PASSWORD", "")
+ANGEL_TOTP_SECRET = os.environ.get("ANGEL_TOTP_SECRET", "")
+
+# SmartAPI's published historical-data rate limit is ~3 requests/second.
+# This delay keeps sequential requests comfortably under that.
+ANGEL_REQUEST_DELAY_SECONDS = 0.35
+
+INSTRUMENT_MASTER_URL = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+
 # ---- File paths ----
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 CANDIDATES_FILE = os.path.join(DATA_DIR, "candidates.json")
@@ -45,8 +59,10 @@ UNIVERSE_MODE = os.environ.get("UNIVERSE_MODE", "NIFTY500")
 NIFTY500_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
 ALL_NSE_EQUITY_URL = "https://archives.nseindia.com/content/equity/EQUITY_L.csv"
 
-# How many stocks to fetch concurrently. Kept low deliberately -- see
-# scan.py for why (NSE rate-limits concurrent scraping more than Yahoo did).
+# How many stocks to fetch concurrently. Not used with Angel SmartAPI
+# (fetches run sequentially with ANGEL_REQUEST_DELAY_SECONDS between
+# them instead, to respect SmartAPI's published rate limit) -- kept
+# here only in case a future data source benefits from concurrency again.
 MAX_WORKERS = 3
 
 # Extra pause (seconds) between individual stock requests, on top of
