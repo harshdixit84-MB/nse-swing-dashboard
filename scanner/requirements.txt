@@ -1,3 +1,4 @@
 pandas==2.2.2
 requests==2.32.3
-nsepython==2.93
+curl_cffi==0.7.3
+nsepython==1.5
