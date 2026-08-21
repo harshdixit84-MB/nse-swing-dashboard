@@ -17,7 +17,6 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
-from curl_cffi import requests as cffi_requests
 import yfinance as yf
 
 from config import (
@@ -48,25 +47,21 @@ def save_json(path, data):
         json.dump(data, f, indent=2)
 
 
-def fetch_one(symbol, session):
+def fetch_one(symbol):
     """
     Fetches daily OHLCV history for a single symbol.
 
-    Uses yf.Ticker(...).history() rather than the batch yf.download()
-    function -- Ticker's session handling is far more reliable when
-    combined with a custom (curl_cffi) session, whereas yf.download()
-    has known compatibility bugs with non-standard sessions.
-
-    The curl_cffi session impersonates a real Chrome browser's TLS
-    fingerprint, which is necessary because Yahoo Finance blocks plain
-    requests-library traffic (i.e. what GitHub Actions runners look
-    like by default) with empty responses.
+    No custom session is passed here deliberately: yfinance 0.2.40+
+    auto-detects curl_cffi (listed in requirements.txt) and uses its
+    Chrome-impersonating requests internally to get past Yahoo
+    Finance's bot-blocking. Manually constructing and passing our own
+    curl_cffi session conflicts with yfinance's internal session
+    handling and causes silent failures -- that's what caused the
+    earlier 'str' object has no attribute 'name' errors.
     """
     ticker = f"{symbol}.NS"
     try:
-        df = yf.Ticker(ticker, session=session).history(
-            period=LOOKBACK_PERIOD, interval=DATA_INTERVAL
-        )
+        df = yf.Ticker(ticker).history(period=LOOKBACK_PERIOD, interval=DATA_INTERVAL)
         if df is None or df.empty:
             return symbol, None
         return symbol, df
@@ -85,15 +80,13 @@ def main():
 
     history = load_json(HISTORY_FILE, {"entries": []})
 
-    session = cffi_requests.Session(impersonate="chrome")
-
     today_candidates = []
     new_symbols = []
     fetched_count = 0
     failed_count = 0
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(fetch_one, s, session): s for s in universe}
+        futures = {executor.submit(fetch_one, s): s for s in universe}
         for i, future in enumerate(as_completed(futures), start=1):
             symbol, df = future.result()
             if i % 50 == 0 or i == len(universe):
