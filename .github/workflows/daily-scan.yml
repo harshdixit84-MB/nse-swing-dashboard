@@ -14,7 +14,7 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 90   # NSE direct scraping is slower than yfinance was
+    timeout-minutes: 30   # Angel SmartAPI is much faster than scraping was
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -33,6 +33,10 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
+          ANGEL_CLIENT_ID: ${{ secrets.ANGEL_CLIENT_ID }}
+          ANGEL_PASSWORD: ${{ secrets.ANGEL_PASSWORD }}
+          ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
           # Set to "ALL_NSE" to scan every listed NSE equity instead of
           # just the Nifty 500. Can also be set as a repo variable/secret.
           UNIVERSE_MODE: "NIFTY500"
