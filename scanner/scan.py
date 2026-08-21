@@ -6,32 +6,54 @@ GitHub Actions workflow (.github/workflows/daily-scan.yml).
 
 Steps:
 1. Load the NSE universe (Nifty 500 or all NSE, per UNIVERSE_MODE)
-2. Pull daily OHLCV data for each stock (concurrently, small pool)
+2. Pull daily OHLCV data for each stock directly from NSE (nsepython)
 3. Run the EMA Pullback strategy on each
 4. Write today's candidates + append to the running history
 5. Send a Telegram alert for any symbol that's newly appeared today
+
+NOTE ON DATA SOURCE: this used to run on yfinance (Yahoo Finance), but
+Yahoo began persistently blocking requests from GitHub Actions' shared
+IP ranges (empty/error responses on every ticker). Switched to
+nsepython, which pulls historical data straight from NSE's own site
+using the same cookie-handshake technique already used in universe.py.
+NSE tends to rate-limit concurrent scraping harder than sequential
+requests, so concurrency here is intentionally kept low (see
+MAX_WORKERS / REQUEST_DELAY_SECONDS in config.py) -- expect this scan
+to take noticeably longer than the old yfinance version did.
 """
 
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-import yfinance as yf
+import pandas as pd
+from nsepython import equity_history
 
 from config import (
     DATA_DIR,
     CANDIDATES_FILE,
     HISTORY_FILE,
-    LOOKBACK_PERIOD,
-    DATA_INTERVAL,
+    HISTORY_DAYS_BACK,
     MAX_HOLDING_DAYS,
     MAX_WORKERS,
+    REQUEST_DELAY_SECONDS,
     UNIVERSE_MODE,
 )
 from universe import get_universe
 from strategy import evaluate
 from telegram_alert import send_telegram_message, format_setup_message
+
+NSE_COLUMN_MAP = {
+    "CH_TIMESTAMP": "Date",
+    "CH_OPENING_PRICE": "Open",
+    "CH_TRADE_HIGH_PRICE": "High",
+    "CH_TRADE_LOW_PRICE": "Low",
+    "CH_CLOSING_PRICE": "Close",
+    "CH_TOT_TRADED_QTY": "Volume",
+}
+REQUIRED_COLUMNS = ["Open", "High", "Low", "Close", "Volume"]
 
 
 def load_json(path, default):
@@ -49,24 +71,36 @@ def save_json(path, data):
 
 def fetch_one(symbol):
     """
-    Fetches daily OHLCV history for a single symbol.
-
-    No custom session is passed here deliberately: yfinance 0.2.40+
-    auto-detects curl_cffi (listed in requirements.txt) and uses its
-    Chrome-impersonating requests internally to get past Yahoo
-    Finance's bot-blocking. Manually constructing and passing our own
-    curl_cffi session conflicts with yfinance's internal session
-    handling and causes silent failures -- that's what caused the
-    earlier 'str' object has no attribute 'name' errors.
+    Fetches daily OHLCV history for a single symbol directly from NSE.
     """
-    ticker = f"{symbol}.NS"
     try:
-        df = yf.Ticker(ticker).history(period=LOOKBACK_PERIOD, interval=DATA_INTERVAL)
-        if df is None or df.empty:
+        to_date = datetime.now().strftime("%d-%m-%Y")
+        from_date = (datetime.now() - timedelta(days=HISTORY_DAYS_BACK)).strftime("%d-%m-%Y")
+
+        raw = equity_history(symbol, "EQ", from_date, to_date)
+        time.sleep(REQUEST_DELAY_SECONDS)  # be gentle on NSE's rate limiter
+
+        if raw is None or raw.empty:
             return symbol, None
-        return symbol, df
+
+        raw = raw.rename(columns=NSE_COLUMN_MAP)
+        if not all(c in raw.columns for c in REQUIRED_COLUMNS):
+            return symbol, None
+
+        raw["Date"] = pd.to_datetime(raw["Date"])
+        raw = raw.sort_values("Date").reset_index(drop=True)
+
+        for col in REQUIRED_COLUMNS:
+            raw[col] = pd.to_numeric(raw[col], errors="coerce")
+        raw = raw.dropna(subset=REQUIRED_COLUMNS)
+
+        if raw.empty:
+            return symbol, None
+
+        return symbol, raw[REQUIRED_COLUMNS]
+
     except Exception as e:
-        print(f"  Failed to fetch {ticker}: {e}")
+        print(f"  Failed to fetch {symbol}: {e}")
         return symbol, None
 
 
@@ -122,8 +156,8 @@ def main():
           f"{len(new_symbols)} are new.")
 
     if fetched_count == 0:
-        print("WARNING: zero symbols returned data. Yahoo Finance is likely "
-              "still blocking this run -- check the errors above.")
+        print("WARNING: zero symbols returned data. NSE may be blocking "
+              "this run too -- check the errors above.")
 
     if new_symbols:
         header = f"*NSE Swing Scan -- {scan_date}*\n{len(new_symbols)} new setup(s) found:\n"
