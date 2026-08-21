@@ -47,6 +47,10 @@ ALL_NSE_EQUITY_URL = "https://archives.nseindia.com/content/equity/EQUITY_L.csv"
 # Larger batches = fewer requests but bigger payloads; 50-100 is a safe range.
 BATCH_SIZE = 75
 
+# How many stocks to fetch concurrently. Higher = faster scan, but more
+# risk of Yahoo Finance rate-limiting the run. 5-8 is a safe range.
+MAX_WORKERS = 6
+
 # ---- Telegram ----
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
