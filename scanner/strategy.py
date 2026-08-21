@@ -1,96 +1,125 @@
-import pandas as pd
-import numpy as np
-import config
+"""
+EMA Pullback swing strategy -- detection logic.
 
-def check_setup(symbol, df):
+This mirrors the Pine Script version exactly, so backtests done on
+TradingView and results produced here should agree.
+"""
+
+import pandas as pd
+
+from config import (
+    EMA_FAST,
+    EMA_SLOW,
+    SWING_LOOKBACK_DAYS,
+    PULLBACK_MIN_PCT,
+    PULLBACK_MAX_PCT,
+    EMA_TOLERANCE_PCT,
+    VOLUME_CONFIRM_MULT,
+    MIN_AVG_VOLUME,
+    RISK_REWARD_MULT,
+    STOP_BUFFER_PCT,
+)
+
+
+def _is_hammer(row):
+    body_high = max(row["Close"], row["Open"])
+    body_low = min(row["Close"], row["Open"])
+    body_size = body_high - body_low
+    upper_wick = row["High"] - body_high
+    lower_wick = body_low - row["Low"]
+    if body_size <= 0:
+        return False
+    return lower_wick >= body_size * 2 and upper_wick <= body_size * 0.5
+
+
+def _is_bullish_engulfing(prev_row, row):
+    prior_bearish = prev_row["Close"] < prev_row["Open"]
+    is_bullish = row["Close"] > row["Open"]
+    engulfs = row["Close"] >= prev_row["Open"] and row["Open"] <= prev_row["Close"]
+    return prior_bearish and is_bullish and engulfs
+
+
+def evaluate(df: pd.DataFrame):
     """
-    Evaluates the Trend Pullback to 20/50 EMA strategy on daily price data.
-    Returns setup dictionary if valid, else None.
+    df must have columns: Open, High, Low, Close, Volume (most recent
+    row last) and at least ~60 rows of history.
+
+    Returns a dict describing the setup if the LAST row qualifies,
+    otherwise returns None.
     """
-    if df is None or len(df) < 50:
+    if df is None or len(df) < EMA_SLOW + SWING_LOOKBACK_DAYS:
         return None
 
-    # Calculate indicators
-    df['EMA20'] = df['Close'].ewm(span=20, adjust=False).mean()
-    df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
-    df['Vol20SMA'] = df['Volume'].rolling(window=20).mean()
-    df['High20'] = df['High'].rolling(window=20).max()
+    df = df.copy()
+    df["EMA20"] = df["Close"].ewm(span=EMA_FAST, adjust=False).mean()
+    df["EMA50"] = df["Close"].ewm(span=EMA_SLOW, adjust=False).mean()
+    df["AvgVol20"] = df["Volume"].rolling(20).mean()
+    df["SwingHigh"] = df["High"].rolling(SWING_LOOKBACK_DAYS).max()
+    df["PullbackLow5"] = df["Low"].rolling(5).min()
 
-    # Get latest bar and prior bar data
-    curr = df.iloc[-1]
+    last = df.iloc[-1]
     prev = df.iloc[-2]
 
-    close = curr['Close']
-    open_price = curr['Open']
-    high = curr['High']
-    low = curr['Low']
-    volume = curr['Volume']
+    close = last["Close"]
+    ema20 = last["EMA20"]
+    ema50 = last["EMA50"]
 
-    ema20 = curr['EMA20']
-    ema50 = curr['EMA50']
-    vol_sma20 = curr['Vol20SMA']
-    swing_high20 = curr['High20']
-
-    # 1. Uptrend filter: Close > EMA20 > EMA50, and Close > EMA50
-    if not (close > ema20 > ema50 and close > ema50):
+    # 1. Trend filter
+    uptrend = close > ema20 and ema20 > ema50 and close > ema50
+    if not uptrend:
         return None
 
-    # 2. Pullback filter: Price pulled back 5-15% from 20-day high
-    if pd.isna(swing_high20) or swing_high20 == 0:
+    # 2. Pullback filter
+    swing_high = last["SwingHigh"]
+    if swing_high <= 0:
         return None
-    pullback_pct = ((swing_high20 - close) / swing_high20) * 100
-    if not (5.0 <= pullback_pct <= 15.0):
-        return None
-
-    # 3. Near EMA filter: Price within 2% of EMA20 or EMA50
-    near_ema20 = abs(close - ema20) / ema20 <= 0.02
-    near_ema50 = abs(close - ema50) / ema50 <= 0.02
-    if not (near_ema20 or near_ema50):
+    pullback_pct = (swing_high - close) / swing_high * 100
+    valid_pullback = PULLBACK_MIN_PCT <= pullback_pct <= PULLBACK_MAX_PCT
+    if not valid_pullback:
         return None
 
-    # 4. Liquidity filter: 20-day average volume >= 500,000
-    if pd.isna(vol_sma20) or vol_sma20 < 500000:
+    # 3. Price near EMA20 or EMA50
+    dist_ema20_pct = abs(close - ema20) / ema20 * 100
+    dist_ema50_pct = abs(close - ema50) / ema50 * 100
+    near_ema = dist_ema20_pct <= EMA_TOLERANCE_PCT or dist_ema50_pct <= EMA_TOLERANCE_PCT
+    if not near_ema:
         return None
 
-    # 5. Bullish reversal candle check (Hammer or Bullish Engulfing)
-    body = abs(close - open_price)
-    candle_range = high - low
-    if candle_range == 0:
+    # 4. Liquidity filter
+    avg_vol20 = last["AvgVol20"]
+    if pd.isna(avg_vol20) or avg_vol20 < MIN_AVG_VOLUME:
         return None
 
-    lower_wick = min(open_price, close) - low
-    upper_wick = high - max(open_price, close)
-
-    is_hammer = (lower_wick >= 2 * body) and (upper_wick <= 0.2 * body)
-    
-    prev_close = prev['Close']
-    prev_open = prev['Open']
-    is_bullish_engulfing = (prev_close < prev_open) and (close > open_price) and (close >= prev_open) and (open_price <= prev_close)
-
-    if not (is_hammer or is_bullish_engulfing):
+    # 5. Bullish reversal candle
+    is_hammer = _is_hammer(last)
+    is_engulfing = _is_bullish_engulfing(prev, last)
+    if not (is_hammer or is_engulfing):
         return None
 
-    # 6. Volume confirmation: Reversal volume >= 20-day average
-    if volume < vol_sma20:
+    # 6. Volume confirmation
+    if last["Volume"] < avg_vol20 * VOLUME_CONFIRM_MULT:
         return None
 
-    # Risk management calculations
-    pullback_5d_low = df['Low'].tail(5).min()
-    sl_base = max(pullback_5d_low, ema50)
-    stop_loss = round(sl_base * 0.995, 2)  # 0.5% buffer
-
-    risk = close - stop_loss
-    if risk <= 0:
+    # ---- All filters passed: build the trade plan ----
+    pullback_low = last["PullbackLow5"]
+    stop_loss = max(pullback_low, ema50) * (1 - STOP_BUFFER_PCT / 100)
+    risk_per_share = close - stop_loss
+    if risk_per_share <= 0:
         return None
 
-    target_2r = close + (2 * risk)
-    target = round(max(target_2r, swing_high20), 2)
+    target_2r = close + risk_per_share * RISK_REWARD_MULT
+    target = max(target_2r, swing_high)
 
     return {
-        "symbol": symbol,
-        "close": round(close, 2),
-        "stop_loss": stop_loss,
-        "target": target,
+        "entry_price": round(float(close), 2),
+        "stop_loss": round(float(stop_loss), 2),
+        "target": round(float(target), 2),
+        "risk_per_share": round(float(risk_per_share), 2),
+        "reward_risk_ratio": round(float((target - close) / risk_per_share), 2),
+        "pullback_pct": round(float(pullback_pct), 2),
+        "swing_high": round(float(swing_high), 2),
         "pattern": "Hammer" if is_hammer else "Bullish Engulfing",
-        "pullback_pct": round(pullback_pct, 2)
+        "ema20": round(float(ema20), 2),
+        "ema50": round(float(ema50), 2),
+        "avg_volume_20d": int(avg_vol20),
     }
