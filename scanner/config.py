@@ -25,8 +25,10 @@ STOP_BUFFER_PCT = 0.5          # extra cushion below the calculated stop
 MAX_HOLDING_DAYS = 15          # informational -- shown on the dashboard
 
 # ---- Data settings ----
-LOOKBACK_PERIOD = "6mo"        # how much daily history to pull per stock
-DATA_INTERVAL = "1d"           # daily candles -- change to "1wk" for weekly swings
+# Strategy runs on DAILY candles.
+HISTORY_DAYS_BACK = 220        # calendar days of history to request per stock
+                                # (padded to comfortably cover EMA_SLOW +
+                                # SWING_LOOKBACK_DAYS worth of trading bars)
 
 # ---- File paths ----
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
@@ -43,13 +45,18 @@ UNIVERSE_MODE = os.environ.get("UNIVERSE_MODE", "NIFTY500")
 NIFTY500_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
 ALL_NSE_EQUITY_URL = "https://archives.nseindia.com/content/equity/EQUITY_L.csv"
 
-# How many tickers to request from Yahoo Finance per batch download.
-# Larger batches = fewer requests but bigger payloads; 50-100 is a safe range.
-BATCH_SIZE = 75
+# How many stocks to fetch concurrently. Kept low deliberately -- see
+# scan.py for why (NSE rate-limits concurrent scraping more than Yahoo did).
+MAX_WORKERS = 3
 
-# How many stocks to fetch concurrently. Higher = faster scan, but more
-# risk of Yahoo Finance rate-limiting the run. 5-8 is a safe range.
-MAX_WORKERS = 6
+# Extra pause (seconds) between individual stock requests, on top of
+# thread concurrency limits. NSE rate-limits concurrent automated
+# requests more aggressively than sequential ones.
+REQUEST_DELAY_SECONDS = 0.4
+
+# Calendar days of history to request (not trading days -- padded to
+# comfortably cover EMA_SLOW + SWING_LOOKBACK_DAYS worth of trading bars)
+HISTORY_DAYS_BACK = 220
 
 # ---- Telegram ----
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
