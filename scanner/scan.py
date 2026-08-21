@@ -14,10 +14,12 @@ Steps:
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 
 import pandas as pd
 import yfinance as yf
+from curl_cffi import requests as cffi_requests
 
 from config import (
     DATA_DIR,
@@ -52,10 +54,19 @@ def chunked(items, size):
         yield items[i:i + size]
 
 
-def fetch_batch(symbols):
+def fetch_batch(symbols, session):
     """
     Downloads daily OHLCV for a batch of symbols in one request.
     Returns {symbol: DataFrame} for symbols that returned usable data.
+
+    Uses a curl_cffi session that impersonates a real Chrome browser's
+    TLS fingerprint -- Yahoo Finance increasingly blocks plain
+    requests-library traffic (which is what GitHub Actions runners look
+    like by default), returning empty responses instead of data.
+
+    threads=False is deliberate: yfinance's internal sqlite cache can
+    throw "database is locked" errors under heavy parallel access,
+    which gets worse when Yahoo is already stressing the connection.
     """
     tickers = [f"{s}.NS" for s in symbols]
     try:
@@ -64,9 +75,10 @@ def fetch_batch(symbols):
             period=LOOKBACK_PERIOD,
             interval=DATA_INTERVAL,
             group_by="ticker",
-            threads=True,
+            threads=False,
             progress=False,
             auto_adjust=False,
+            session=session,
         )
     except Exception as e:
         print(f"  Batch download failed: {e}")
@@ -98,13 +110,24 @@ def main():
 
     history = load_json(HISTORY_FILE, {"entries": []})
 
+    # Browser-impersonating session -- see fetch_batch() docstring.
+    session = cffi_requests.Session(impersonate="chrome")
+
     today_candidates = []
     new_symbols = []
     batches = list(chunked(universe, BATCH_SIZE))
 
     for batch_num, batch in enumerate(batches, start=1):
         print(f"Batch {batch_num}/{len(batches)} -- {len(batch)} symbols")
-        batch_data = fetch_batch(batch)
+        batch_data = fetch_batch(batch, session)
+        if not batch_data and batch_num == 1:
+            print("  WARNING: entire first batch returned no data. "
+                  "Yahoo Finance may be blocking this run -- check the "
+                  "error text above for 'Expecting value' or 'database "
+                  "is locked' errors.")
+        # Small pause between batches so we don't look like a flood of
+        # requests to Yahoo's rate limiter.
+        time.sleep(2)
 
         for symbol, df in batch_data.items():
             setup = evaluate(df)
