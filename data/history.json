@@ -1,3 +1,20 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "symbol": "SWIGGY",
+      "date_found": "2026-08-31",
+      "max_holding_days": 15,
+      "entry_price": 281.9,
+      "stop_loss": 274.77,
+      "target": 305.0,
+      "risk_per_share": 7.13,
+      "reward_risk_ratio": 3.24,
+      "pullback_pct": 7.57,
+      "swing_high": 305.0,
+      "pattern": "Hammer",
+      "ema20": 280.37,
+      "ema50": 274.64,
+      "avg_volume_20d": 13837427
+    }
+  ]
 }
