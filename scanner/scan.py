@@ -47,7 +47,7 @@ from config import (
 )
 from universe import get_universe
 from strategy import evaluate
-from telegram_alert import send_telegram_message, format_setup_message
+from telegram_alert import send_telegram_message, format_scan_message
 
 
 def load_json(path, default):
@@ -212,10 +212,7 @@ def main():
               "login/credentials and the errors above.")
 
     if new_symbols:
-        header = f"*NSE Swing Scan -- {scan_date}*\n{len(new_symbols)} new setup(s) found:\n"
-        send_telegram_message(header)
-        for entry in new_symbols:
-            send_telegram_message(format_setup_message(entry["symbol"], entry))
+        send_telegram_message(format_scan_message(scan_date, new_symbols))
     else:
         print("No new setups today -- no Telegram alert sent.")
 
