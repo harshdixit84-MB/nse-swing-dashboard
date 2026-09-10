@@ -1,21 +1,4 @@
 {
-  "scan_date": "2026-09-09",
-  "candidates": [
-    {
-      "symbol": "RKFORGE",
-      "date_found": "2026-09-09",
-      "max_holding_days": 15,
-      "entry_price": 720.7,
-      "stop_loss": 686.0,
-      "target": 790.09,
-      "risk_per_share": 34.7,
-      "reward_risk_ratio": 2.0,
-      "pullback_pct": 6.74,
-      "swing_high": 772.8,
-      "pattern": "Bullish Engulfing",
-      "ema20": 717.62,
-      "ema50": 679.69,
-      "avg_volume_20d": 779702
-    }
-  ]
+  "scan_date": "2026-09-10",
+  "candidates": []
 }
