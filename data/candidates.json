@@ -1,4 +1,21 @@
 {
   "scan_date": "2026-09-11",
-  "candidates": []
+  "candidates": [
+    {
+      "symbol": "MOTHERSON",
+      "date_found": "2026-09-11",
+      "max_holding_days": 15,
+      "entry_price": 164.45,
+      "stop_loss": 159.32,
+      "target": 174.71,
+      "risk_per_share": 5.13,
+      "reward_risk_ratio": 2.0,
+      "pullback_pct": 5.09,
+      "swing_high": 173.27,
+      "pattern": "Bullish Engulfing",
+      "ema20": 163.75,
+      "ema50": 158.13,
+      "avg_volume_20d": 10958139
+    }
+  ]
 }
