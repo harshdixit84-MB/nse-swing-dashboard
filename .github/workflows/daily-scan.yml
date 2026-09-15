@@ -1,12 +1,18 @@
 name: Daily NSE Swing Scan
 
+# Schedule DISABLED -- was competing with nse-stock-chatbot's on-demand
+# Analyze button for the same Angel SmartAPI account's shared rate-limit
+# budget (both use the same ANGEL_* credentials). This scan now only
+# runs when YOU trigger it: Actions tab -> "Daily NSE Swing Scan" ->
+# Run workflow. To re-enable the automatic twice-daily schedule later,
+# uncomment the "schedule:" block below.
 on:
-  schedule:
-    # 8:45 UTC = 2:15 PM IST (mid-day check -- reads an INCOMPLETE candle, see README)
-    - cron: "45 8 * * 1-5"
-    # 10:30 UTC = 4:00 PM IST (after close -- reads the FINAL, confirmed daily candle)
-    - cron: "30 10 * * 1-5"
-  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+  # schedule:
+  #   # 8:45 UTC = 2:15 PM IST (mid-day check -- reads an INCOMPLETE candle, see README)
+  #   - cron: "45 8 * * 1-5"
+  #   # 10:30 UTC = 4:00 PM IST (after close -- reads the FINAL, confirmed daily candle)
+  #   - cron: "30 10 * * 1-5"
+  workflow_dispatch: {}   # the ONLY trigger right now -- click "Run workflow" in the Actions tab whenever you want a fresh scan
 
 permissions:
   contents: write   # needed so the workflow can commit updated data files
