@@ -21,8 +21,21 @@ MIN_AVG_VOLUME = 500_000       # 20-day average volume floor (liquidity filter)
 
 # ---- Risk management ----
 RISK_REWARD_MULT = 2.0         # fallback target = entry + risk * this
-STOP_BUFFER_PCT = 0.5          # extra cushion below the calculated stop
 MAX_HOLDING_DAYS = 15          # informational -- shown on the dashboard
+
+# STOP_BUFFER_PCT is superseded by the ATR-based buffer below (see
+# scanner/risk.py). Left here only in case anything else still
+# imports it -- strategy.py no longer uses it.
+STOP_BUFFER_PCT = 0.5
+
+# ---- ATR-based stop buffer (replaces the fixed % buffer above) ----
+# Buffer = ATR_STOP_MULT * ATR(ATR_PERIOD), subtracted from the
+# structural stop level (max of pullback low / EMA50). Scales the
+# buffer to the stock's actual recent volatility instead of a flat
+# percentage of price -- mirrors the same fix applied to
+# nse-stock-chatbot's core/strategy.py.
+ATR_PERIOD = 14
+ATR_STOP_MULT = 0.5
 
 # ---- Data settings ----
 # Strategy runs on DAILY candles.
